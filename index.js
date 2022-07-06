@@ -45,11 +45,15 @@ client.on("ready", async () => {
   // }, 8000);
 });
 
-client.on("messageCreate", (message) => {
-  // if (message.content == "hi") {
-  //   message.reply("Hello");
-  // }
-  MessageHandler(message);
+client.on("messageCreate", async (message) => {
+  if (message.content == "!top6") {
+    const top6 = await getTop6();
+    message.reply("Top 6: todo");
+  } else if (message.content == "!riverrace") {
+    const riverRaceLog = await getLatestRiverRaceLog();
+    message.reply("River Race Season Score: Todo");
+  }
+  // MessageHandler(message);
 });
 
 client.login(process.env.DISCORDTOKEN);
@@ -118,8 +122,7 @@ function makeEmbed(missed) {
   return { missedDeckEmbed, missedDaysEmbed };
 }
 
-//Application for Clash Royal stuff
-app.get("/", async (req, res) => {
+async function getLatestRiverRaceLog() {
   //View the json from a web browser at root
   const riverracelog = await crapi.getRiverRaceLog();
 
@@ -129,23 +132,35 @@ app.get("/", async (req, res) => {
   ];
   // console.log(uniqueSeasonIDs);
   //sum up rankings
+  //get latest season ID if multiple
   let latestSeasonID = Math.max(...uniqueSeasonIDs);
+
+  //get just the lastest season logs
   const latestSeasons = riverracelog.items.filter(
     (rrl) => rrl.seasonId === latestSeasonID
   );
+
+  //find the standings for the latest season
   const latestStandings = latestSeasons.map((ls) => ls.standings).flat();
+
+  //filter down to just my clan
   const myClanStandings = latestStandings.filter(
     (ls) => ls.clan.tag == `#${clanTag}`
   );
+
+  //get all the partcipants in the logs for the season.
   const myClanParticipants = myClanStandings
     .map((mcs) => mcs.clan.participants)
     .flat();
 
+  //group the tags together to organize players to make summing up scores easier
   let uniquePlayerTags = [...new Set(myClanParticipants.map((mcp) => mcp.tag))];
   const playerGrouping = uniquePlayerTags.map((playerTag) => {
     const group = myClanParticipants.filter((mcp) => mcp.tag == playerTag);
     return group;
   });
+
+  //Sum up all scores and sort by highest score to lowest.
   const playerTotal = playerGrouping
     .map((pg) => {
       let initialValue = 0;
@@ -160,8 +175,72 @@ app.get("/", async (req, res) => {
       else if (a.total < b.total) return 1;
       else return 0;
     });
-  //
-  res.json({ playerTotal });
+
+  return playerTotal;
+}
+
+async function getTop6() {
+  const riverRaceLog = await getLatestRiverRaceLog();
+  const top6 = riverRaceLog.splice(0, 6);
+  return top6;
+}
+//Application for Clash Royal stuff
+app.get("/", async (req, res) => {
+  //View the json from a web browser at root
+  const riverracelog = await crapi.getRiverRaceLog();
+
+  //get season ID
+  const uniqueSeasonIDs = [
+    ...new Set(riverracelog.items.map((rrl) => rrl.seasonId)),
+  ];
+  // console.log(uniqueSeasonIDs);
+  //sum up rankings
+  //get latest season ID if multiple
+  let latestSeasonID = Math.max(...uniqueSeasonIDs);
+
+  //get just the lastest season logs
+  const latestSeasons = riverracelog.items.filter(
+    (rrl) => rrl.seasonId === latestSeasonID
+  );
+
+  //find the standings for the latest season
+  const latestStandings = latestSeasons.map((ls) => ls.standings).flat();
+
+  //filter down to just my clan
+  const myClanStandings = latestStandings.filter(
+    (ls) => ls.clan.tag == `#${clanTag}`
+  );
+
+  //get all the partcipants in the logs for the season.
+  const myClanParticipants = myClanStandings
+    .map((mcs) => mcs.clan.participants)
+    .flat();
+
+  //group the tags together to organize players to make summing up scores easier
+  let uniquePlayerTags = [...new Set(myClanParticipants.map((mcp) => mcp.tag))];
+  const playerGrouping = uniquePlayerTags.map((playerTag) => {
+    const group = myClanParticipants.filter((mcp) => mcp.tag == playerTag);
+    return group;
+  });
+
+  //Sum up all scores and sort by highest score to lowest.
+  const playerTotal = playerGrouping
+    .map((pg) => {
+      let initialValue = 0;
+      const name = pg[0].name;
+      const total = pg.reduce((prev, curr) => {
+        return prev + curr.fame;
+      }, initialValue);
+      return { name, total };
+    })
+    .sort((a, b) => {
+      if (a.total > b.total) return -1;
+      else if (a.total < b.total) return 1;
+      else return 0;
+    });
+
+  const top6 = playerTotal.splice(0, 6);
+  res.json({ top6 });
   // res.json({ playerTotal, playerGrouping, myClanParticipants });
 });
 
