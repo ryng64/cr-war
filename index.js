@@ -3,6 +3,7 @@ import Discord from "discord.js";
 import express from "express";
 import "dotenv/config";
 import { MessageEmbed } from "discord.js";
+import cron from "node-cron";
 
 // const res = require("express/lib/response");
 const app = express();
@@ -15,23 +16,31 @@ const client = new Discord.Client({
 client.on("ready", async () => {
   console.log(`Logged in as ${client.user.tag}`);
   const channel = await client.channels
+    //fetch different channel id for appropriate channel.
     .fetch("994093588445143164")
     .then((channel) => channel)
     .catch(console.error);
 
   const missed = await getMissedWar();
-  // const missedDecksMessage = missed.missedDecks
-  //   .map((md) => `${md.tag} ${md.name} missed ${4 - md.decksUsedToday}`)
-  //   .toString();
   const missedEmbeds = makeEmbed(missed);
 
-  channel.send({
-    embeds: [missedEmbeds.missedDeckEmbed, missedEmbeds.missedDaysEmbed],
-  });
+  cron.schedule(
+    "45 2 * * 5,6,7,1",
+    () => {
+      channel.send({
+        embeds: [missedEmbeds.missedDeckEmbed, missedEmbeds.missedDaysEmbed],
+      });
+    },
+    {
+      scheduled: true,
+      timezone: "America/Los_Angeles",
+    }
+  );
+
   // console.log(missed);
-  setInterval(() => {
-    process.exit(1);
-  }, 8000);
+  // setInterval(() => {
+  //   process.exit(1);
+  // }, 8000);
 });
 
 client.on("messageCreate", (message) => {
@@ -72,6 +81,7 @@ async function getMissedWar() {
   return { missedDecks, missedDays };
 }
 
+//creates an discord embed message for both missed Decks and missed Days
 function makeEmbed(missed) {
   const missedDecks = missed.missedDecks.map((md) => {
     return {
@@ -107,32 +117,9 @@ function makeEmbed(missed) {
 
 //Application for Clash Royal stuff
 app.get("/", async (req, res) => {
-  // res.send("Hello World");
-  const data = await fetch(
-    `https://api.clashroyale.com/v1/clans/%23QYJLG9P9/currentriverrace`,
-    {
-      method: "GET",
-      headers: new Headers({
-        Authorization: `Bearer ${process.env.CRTOKEN}`,
-      }),
-    }
-  )
-    .then((response) => response.json())
-    .then((data) => data)
-    .catch((error) => error);
-
-  // find all decks used
-  const missedDecks = data.clan.participants.filter((participant) => {
-    if (participant.decksUsedToday < 4 && participant.decksUsedToday > 0)
-      return true;
-  });
-
-  const missedDays = data.clan.participants.filter((participant) => {
-    if (participant.decksUsedToday == 0) return true;
-  });
-  const truant = { missedDecks, missedDays };
+  //View the json from a web browser at root
+  const truant = await getMissedWar();
   res.json(truant);
-  // console.log(data);
 });
 
 app.listen(port, () => {
