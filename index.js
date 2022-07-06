@@ -90,7 +90,7 @@ function makeEmbed(missed) {
   const missedDays = missed.missedDays.map((md) => {
     return {
       name: `${md.tag} - ${md.name}`,
-      value: `missed ${4 - md.decksUsedToday} deck`,
+      value: `missed ${4 - md.decksUsedToday} decks`,
       inline: false,
     };
   });
@@ -100,7 +100,7 @@ function makeEmbed(missed) {
     .setDescription("Missed all 4 decks")
     .addFields(missedDays)
     .setTimestamp()
-    .setFooter({ text: `please make all decks 🙏 Warnings issued` });
+    .setFooter({ text: `please make all decks 🙏 Warnings may be issued ⚠` });
 
   return { missedDeckEmbed, missedDaysEmbed };
 }
