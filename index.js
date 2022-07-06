@@ -1,13 +1,15 @@
 import fetch, { Headers } from "node-fetch";
-import Discord from "discord.js";
+import Discord, { MessageEmbed } from "discord.js";
 import express from "express";
 import "dotenv/config";
-import { MessageEmbed } from "discord.js";
 import cron from "node-cron";
+import crapi from "./crapi.js";
+import MessageHandler from "./messageHandler.js";
 
 // const res = require("express/lib/response");
 const app = express();
 const port = 3000;
+const clanTag = "QYJLG9P9";
 
 const client = new Discord.Client({
   intents: ["GUILDS", "GUILD_MESSAGES"],
@@ -44,9 +46,10 @@ client.on("ready", async () => {
 });
 
 client.on("messageCreate", (message) => {
-  if (message.content == "hi") {
-    message.reply("Hello");
-  }
+  // if (message.content == "hi") {
+  //   message.reply("Hello");
+  // }
+  MessageHandler(message);
 });
 
 client.login(process.env.DISCORDTOKEN);
@@ -56,7 +59,7 @@ client.login(process.env.DISCORDTOKEN);
 
 async function getMissedWar() {
   const data = await fetch(
-    `https://api.clashroyale.com/v1/clans/%23QYJLG9P9/currentriverrace`,
+    `https://api.clashroyale.com/v1/clans/%23${clanTag}/currentriverrace`,
     {
       method: "GET",
       headers: new Headers({
@@ -118,8 +121,48 @@ function makeEmbed(missed) {
 //Application for Clash Royal stuff
 app.get("/", async (req, res) => {
   //View the json from a web browser at root
-  const truant = await getMissedWar();
-  res.json(truant);
+  const riverracelog = await crapi.getRiverRaceLog();
+
+  //get season ID
+  const uniqueSeasonIDs = [
+    ...new Set(riverracelog.items.map((rrl) => rrl.seasonId)),
+  ];
+  // console.log(uniqueSeasonIDs);
+  //sum up rankings
+  let latestSeasonID = Math.max(...uniqueSeasonIDs);
+  const latestSeasons = riverracelog.items.filter(
+    (rrl) => rrl.seasonId === latestSeasonID
+  );
+  const latestStandings = latestSeasons.map((ls) => ls.standings).flat();
+  const myClanStandings = latestStandings.filter(
+    (ls) => ls.clan.tag == `#${clanTag}`
+  );
+  const myClanParticipants = myClanStandings
+    .map((mcs) => mcs.clan.participants)
+    .flat();
+
+  let uniquePlayerTags = [...new Set(myClanParticipants.map((mcp) => mcp.tag))];
+  const playerGrouping = uniquePlayerTags.map((playerTag) => {
+    const group = myClanParticipants.filter((mcp) => mcp.tag == playerTag);
+    return group;
+  });
+  const playerTotal = playerGrouping
+    .map((pg) => {
+      let initialValue = 0;
+      const name = pg[0].name;
+      const total = pg.reduce((prev, curr) => {
+        return prev + curr.fame;
+      }, initialValue);
+      return { name, total };
+    })
+    .sort((a, b) => {
+      if (a.total > b.total) return -1;
+      else if (a.total < b.total) return 1;
+      else return 0;
+    });
+  //
+  res.json({ playerTotal });
+  // res.json({ playerTotal, playerGrouping, myClanParticipants });
 });
 
 app.listen(port, () => {
