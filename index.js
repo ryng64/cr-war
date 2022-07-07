@@ -22,10 +22,10 @@ client.on("ready", async () => {
   cron.schedule(
     "45 2 * * 5,6,7,1",
     async () => {
-      console.log("cron schedule stared");
+      console.log("Missed Wars Schedule Running");
       const channel = await client.channels
         //fetch different channel id for appropriate channel.
-        .fetch(botChannelID)
+        .fetch(testChannel)
         .then((channel) => channel)
         .catch(console.error);
       const missed = await getMissedWar();
@@ -44,16 +44,18 @@ client.on("ready", async () => {
 client.on("messageCreate", async (message) => {
   const channel = await client.channels
     //fetch different channel id for appropriate channel.
-    .fetch(botChannelID)
+    .fetch(testChannel)
     .then((channel) => channel)
     .catch(console.error);
   if (message.content == "!top6") {
+    console.log("top6 running");
     const top6 = await getTop6();
     const top6Message = makeTop6Embed(top6);
     channel.send({
       embeds: [top6Message],
     });
   } else if (message.content == "!riverrace") {
+    console.log("riverrace running");
     const riverRaceLog = await getLatestRiverRaceLog();
     const riverMessage = makeRiverLogEmbed(riverRaceLog);
     channel.send({
