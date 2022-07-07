@@ -173,7 +173,7 @@ function makeTop6Embed(top6) {
 async function getLatestRiverRaceLog() {
   //View the json from a web browser at root
   const riverracelog = await crapi.getRiverRaceLog();
-
+  console.log("getRiverRace", riverracelog);
   //get season ID
   const uniqueSeasonIDs = [
     ...new Set(riverracelog.items.map((rrl) => rrl.seasonId)),
