@@ -19,18 +19,17 @@ const client = new Discord.Client({
 
 client.on("ready", async () => {
   console.log(`Logged in as ${client.user.tag}`);
-  const channel = await client.channels
-    //fetch different channel id for appropriate channel.
-    .fetch(botChannelID)
-    .then((channel) => channel)
-    .catch(console.error);
-
-  const missed = await getMissedWar();
-  const missedEmbeds = makeMissedEmbed(missed);
-
   cron.schedule(
-    "45 2 * * 5,6,7,1",
-    () => {
+    "49 22 * * 3,4,5,6,7,1",
+    async () => {
+      console.log("cron schedule stared");
+      const channel = await client.channels
+        //fetch different channel id for appropriate channel.
+        .fetch(botChannelID)
+        .then((channel) => channel)
+        .catch(console.error);
+      const missed = await getMissedWar();
+      const missedEmbeds = makeMissedEmbed(missed);
       channel.send({
         embeds: [missedEmbeds.missedDeckEmbed, missedEmbeds.missedDaysEmbed],
       });
@@ -40,11 +39,6 @@ client.on("ready", async () => {
       timezone: "America/Los_Angeles",
     }
   );
-
-  // console.log(missed);
-  // setInterval(() => {
-  //   process.exit(1);
-  // }, 8000);
 });
 
 client.on("messageCreate", async (message) => {
