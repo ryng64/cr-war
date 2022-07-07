@@ -19,26 +19,27 @@ const client = new Discord.Client({
 
 client.on("ready", async () => {
   console.log(`Logged in as ${client.user.tag}`);
-  cron.schedule(
-    "45 2 * * 5,6,7,1",
-    async () => {
-      console.log("Missed Wars Schedule Running");
-      const channel = await client.channels
-        //fetch different channel id for appropriate channel.
-        .fetch(testChannel)
-        .then((channel) => channel)
-        .catch(console.error);
-      const missed = await getMissedWar();
-      const missedEmbeds = makeMissedEmbed(missed);
-      channel.send({
-        embeds: [missedEmbeds.missedDeckEmbed, missedEmbeds.missedDaysEmbed],
-      });
-    },
-    {
-      scheduled: true,
-      timezone: "America/Los_Angeles",
-    }
-  );
+  //cron scheduler may have issues on server revisit how to schedule this
+  // cron.schedule(
+  //   "45 2 * * 5,6,7,1",
+  //   async () => {
+  //     console.log("Missed Wars Schedule Running");
+  //     const channel = await client.channels
+  //       //fetch different channel id for appropriate channel.
+  //       .fetch(testChannel)
+  //       .then((channel) => channel)
+  //       .catch(console.error);
+  //     const missed = await getMissedWar();
+  //     const missedEmbeds = makeMissedEmbed(missed);
+  //     channel.send({
+  //       embeds: [missedEmbeds.missedDeckEmbed, missedEmbeds.missedDaysEmbed],
+  //     });
+  //   },
+  //   {
+  //     scheduled: true,
+  //     timezone: "America/Los_Angeles",
+  //   }
+  // );
 });
 
 client.on("messageCreate", async (message) => {
@@ -62,6 +63,13 @@ client.on("messageCreate", async (message) => {
       embeds: [riverMessage],
     });
     // message.reply("River Race Season Score: Todo");
+  } else if (message.content == "!misseddecks") {
+    console.log("Missed Wars ran");
+    const missed = await getMissedWar();
+    const missedEmbeds = makeMissedEmbed(missed);
+    channel.send({
+      embeds: [missedEmbeds.missedDeckEmbed, missedEmbeds.missedDaysEmbed],
+    });
   }
   // MessageHandler(message);
 });
