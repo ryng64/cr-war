@@ -24,7 +24,7 @@ client.on("ready", async () => {
     .catch(console.error);
 
   const missed = await getMissedWar();
-  const missedEmbeds = makeEmbed(missed);
+  const missedEmbeds = makeMissedEmbed(missed);
 
   cron.schedule(
     "45 2 * * 5,6,7,1",
@@ -46,12 +46,24 @@ client.on("ready", async () => {
 });
 
 client.on("messageCreate", async (message) => {
+  const channel = await client.channels
+    //fetch different channel id for appropriate channel.
+    .fetch("994093588445143164")
+    .then((channel) => channel)
+    .catch(console.error);
   if (message.content == "!top6") {
     const top6 = await getTop6();
-    message.reply("Top 6: todo");
+    const top6Message = makeTop6Embed(top6);
+    channel.send({
+      embeds: [top6Message],
+    });
   } else if (message.content == "!riverrace") {
     const riverRaceLog = await getLatestRiverRaceLog();
-    message.reply("River Race Season Score: Todo");
+    const riverMessage = makeRiverLogEmbed(riverRaceLog);
+    channel.send({
+      embeds: [riverMessage],
+    });
+    // message.reply("River Race Season Score: Todo");
   }
   // MessageHandler(message);
 });
@@ -89,7 +101,7 @@ async function getMissedWar() {
 }
 
 //creates an discord embed message for both missed Decks and missed Days
-function makeEmbed(missed) {
+function makeMissedEmbed(missed) {
   const missedDecks = missed.missedDecks.map((md) => {
     return {
       name: `${md.tag} - ${md.name}`,
@@ -120,6 +132,44 @@ function makeEmbed(missed) {
     .setFooter({ text: `please make all decks 🙏 Warnings may be issued ⚠` });
 
   return { missedDeckEmbed, missedDaysEmbed };
+}
+
+function makeRiverLogEmbed(riverLog) {
+  const scores = riverLog.map((log) => {
+    return {
+      name: `${log.name}`,
+      value: `fame: ${log.total}`,
+      inline: false,
+    };
+  });
+  const scoresEmbed = new MessageEmbed()
+    .setColor("#43a047")
+    .setTitle("River Race Scores")
+    .setDescription("Clan Scores of top 25*")
+    .addFields(scores)
+    .setTimestamp()
+    .setFooter({ text: `Keep it up! 💪 *discord limited to 25 per message` });
+
+  return scoresEmbed;
+}
+
+function makeTop6Embed(top6) {
+  const scores = top6.map((log) => {
+    return {
+      name: `${log.name}`,
+      value: `fame: ${log.total}`,
+      inline: false,
+    };
+  });
+  const scoresEmbed = new MessageEmbed()
+    .setColor("#6a1b9a")
+    .setTitle("Top 6")
+    .setDescription("Top 6 in Clan Wars this season")
+    .addFields(scores)
+    .setTimestamp()
+    .setFooter({ text: `Great Job! 🏆` });
+
+  return scoresEmbed;
 }
 
 async function getLatestRiverRaceLog() {
