@@ -20,7 +20,7 @@ const client = new Discord.Client({
 client.on("ready", async () => {
   console.log(`Logged in as ${client.user.tag}`);
   cron.schedule(
-    "49 22 * * 3,4,5,6,7,1",
+    "45 2 * * 5,6,7,1",
     async () => {
       console.log("cron schedule stared");
       const channel = await client.channels
