@@ -10,6 +10,8 @@ import MessageHandler from "./messageHandler.js";
 const app = express();
 const port = 3000;
 const clanTag = "QYJLG9P9";
+const botChannelID = "994007661290987540";
+const testChannel = "994093588445143164";
 
 const client = new Discord.Client({
   intents: ["GUILDS", "GUILD_MESSAGES"],
@@ -19,7 +21,7 @@ client.on("ready", async () => {
   console.log(`Logged in as ${client.user.tag}`);
   const channel = await client.channels
     //fetch different channel id for appropriate channel.
-    .fetch("994093588445143164")
+    .fetch(botChannelID)
     .then((channel) => channel)
     .catch(console.error);
 
@@ -48,7 +50,7 @@ client.on("ready", async () => {
 client.on("messageCreate", async (message) => {
   const channel = await client.channels
     //fetch different channel id for appropriate channel.
-    .fetch("994093588445143164")
+    .fetch(botChannelID)
     .then((channel) => channel)
     .catch(console.error);
   if (message.content == "!top6") {
