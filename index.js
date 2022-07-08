@@ -19,33 +19,12 @@ const client = new Discord.Client({
 
 client.on("ready", async () => {
   console.log(`Logged in as ${client.user.tag}`);
-  //cron scheduler may have issues on server revisit how to schedule this
-  // cron.schedule(
-  //   "45 2 * * 5,6,7,1",
-  //   async () => {
-  //     console.log("Missed Wars Schedule Running");
-  //     const channel = await client.channels
-  //       //fetch different channel id for appropriate channel.
-  //       .fetch(testChannel)
-  //       .then((channel) => channel)
-  //       .catch(console.error);
-  //     const missed = await getMissedWar();
-  //     const missedEmbeds = makeMissedEmbed(missed);
-  //     channel.send({
-  //       embeds: [missedEmbeds.missedDeckEmbed, missedEmbeds.missedDaysEmbed],
-  //     });
-  //   },
-  //   {
-  //     scheduled: true,
-  //     timezone: "America/Los_Angeles",
-  //   }
-  // );
 });
 
 client.on("messageCreate", async (message) => {
   const channel = await client.channels
     //fetch different channel id for appropriate channel.
-    .fetch(testChannel)
+    .fetch(botChannelID)
     .then((channel) => channel)
     .catch(console.error);
   if (message.content == "!top6") {
@@ -118,30 +97,40 @@ function makeMissedEmbed(missed) {
   const missedDeckEmbed = new MessageEmbed()
     .setColor("#ffeb3b")
     .setTitle("Decks Missed")
+    .setThumbnail(
+      "https://static.wikia.nocookie.net/clashroyale/images/9/9f/War_Shield.png/revision/latest/scale-to-width-down/250?cb=20180425130200"
+    )
     .setDescription("less than 4 war decks were played")
     .addFields(missedDecks)
     .setTimestamp()
-    .setFooter({ text: `please make all decks 🙏` });
+    .setFooter({
+      text: `please make all decks 🙏. Other commands : !top6 !riverrace !misseddecks`,
+    });
   const missedDays = missed.missedDays.map((md) => {
     return {
       name: `${md.tag} - ${md.name}`,
-      value: `missed ${4 - md.decksUsedToday} decks`,
+      value: `missed 4 decks`,
       inline: false,
     };
   });
   const missedDaysEmbed = new MessageEmbed()
     .setColor("#d32f2f")
     .setTitle("Day Missed")
+    .setThumbnail(
+      "https://static.wikia.nocookie.net/clashroyale/images/9/9f/War_Shield.png/revision/latest/scale-to-width-down/250?cb=20180425130200"
+    )
     .setDescription("Missed all 4 decks")
     .addFields(missedDays)
     .setTimestamp()
-    .setFooter({ text: `please make all decks 🙏 Warnings may be issued ⚠` });
+    .setFooter({
+      text: `please make all decks 🙏 Warnings may be issued ⚠. Other commands : !top6 !riverrace !misseddecks`,
+    });
 
   return { missedDeckEmbed, missedDaysEmbed };
 }
 
 function makeRiverLogEmbed(riverLog) {
-  const scores = riverLog.map((log) => {
+  const scores = riverLog.playerTotal.map((log) => {
     return {
       name: `${log.name}`,
       value: `fame: ${log.total}`,
@@ -150,17 +139,23 @@ function makeRiverLogEmbed(riverLog) {
   });
   const scoresEmbed = new MessageEmbed()
     .setColor("#43a047")
-    .setTitle("River Race Scores")
+    .setTitle(`River Race Scores Season ${riverLog.latestSeasonID}`)
+    .setThumbnail(
+      "https://static.wikia.nocookie.net/clashroyale/images/c/cd/Trophy.png/revision/latest?cb=20160107164159"
+    )
     .setDescription("Clan Scores of top 25*")
     .addFields(scores)
     .setTimestamp()
-    .setFooter({ text: `Keep it up! 💪 *discord limited to 25 per message` });
+    .setFooter({
+      text: `Keep it up! 💪 *discord limited to 25 per message. Other commands : !top6 !riverrace !misseddecks`,
+    });
 
   return scoresEmbed;
 }
 
 function makeTop6Embed(top6) {
-  const scores = top6.map((log) => {
+  // console.log(top6);
+  const scores = top6.top6.map((log) => {
     return {
       name: `${log.name}`,
       value: `fame: ${log.total}`,
@@ -169,11 +164,16 @@ function makeTop6Embed(top6) {
   });
   const scoresEmbed = new MessageEmbed()
     .setColor("#6a1b9a")
-    .setTitle("Top 6")
+    .setTitle(`Top 6 Season ${top6.seasonID}`)
+    .setThumbnail(
+      "https://static.wikia.nocookie.net/clashroyale/images/c/cd/Trophy.png/revision/latest?cb=20160107164159"
+    )
     .setDescription("Top 6 in Clan Wars this season")
     .addFields(scores)
     .setTimestamp()
-    .setFooter({ text: `Great Job! 🏆` });
+    .setFooter({
+      text: `Great Job! 🏆. Other commands : !top6 !riverrace !misseddecks`,
+    });
 
   return scoresEmbed;
 }
@@ -181,7 +181,7 @@ function makeTop6Embed(top6) {
 async function getLatestRiverRaceLog() {
   //View the json from a web browser at root
   const riverracelog = await crapi.getRiverRaceLog();
-  console.log("getRiverRace", riverracelog);
+  // console.log("getRiverRace", riverracelog);
   //get season ID
   const uniqueSeasonIDs = [
     ...new Set(riverracelog.items.map((rrl) => rrl.seasonId)),
@@ -232,13 +232,14 @@ async function getLatestRiverRaceLog() {
       else return 0;
     });
 
-  return playerTotal;
+  return { latestSeasonID, playerTotal };
 }
 
 async function getTop6() {
   const riverRaceLog = await getLatestRiverRaceLog();
-  const top6 = riverRaceLog.splice(0, 6);
-  return top6;
+  const seasonID = riverRaceLog.latestSeasonID;
+  const top6 = riverRaceLog.playerTotal.splice(0, 6);
+  return { seasonID, top6 };
 }
 //Application for Clash Royal stuff
 app.get("/", async (req, res) => {
