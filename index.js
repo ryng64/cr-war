@@ -1,20 +1,15 @@
 import fetch, { Headers } from "node-fetch";
 import Discord, { MessageEmbed } from "discord.js";
-import express from "express";
 import "dotenv/config";
-import cron from "node-cron";
 import crapi from "./crapi.js";
-import MessageHandler from "./messageHandler.js";
 
-// const res = require("express/lib/response");
-const app = express();
-const port = 3000;
 const clanTag = "QYJLG9P9";
 const botChannelID = "994007661290987540";
 const testChannel = "994093588445143164";
 
 const client = new Discord.Client({
   intents: ["GUILDS", "GUILD_MESSAGES"],
+  partials: ["MESSAGE", "CHANNEL", "REACTION"],
 });
 
 client.on("ready", async () => {
@@ -22,6 +17,7 @@ client.on("ready", async () => {
 });
 
 client.on("messageCreate", async (message) => {
+  if (message.author.bot) return;
   const channel = await client.channels
     //fetch different channel id for appropriate channel.
     .fetch(botChannelID)
@@ -44,11 +40,11 @@ client.on("messageCreate", async (message) => {
     // message.reply("River Race Season Score: Todo");
   } else if (message.content == "!misseddecks") {
     console.log("Missed Wars ran");
-    const missed = await getMissedWar();
-    const missedEmbeds = makeMissedEmbed(missed);
-    channel.send({
-      embeds: [missedEmbeds.missedDeckEmbed, missedEmbeds.missedDaysEmbed],
-    });
+    // const missed = await getMissedWar();
+    // const missedEmbeds = makeMissedEmbed(missed);
+    // channel.send({
+    //   embeds: [missedEmbeds.missedDeckEmbed, missedEmbeds.missedDaysEmbed],
+    // });
   }
   // MessageHandler(message);
 });
@@ -241,66 +237,3 @@ async function getTop6() {
   const top6 = riverRaceLog.playerTotal.splice(0, 6);
   return { seasonID, top6 };
 }
-//Application for Clash Royal stuff
-app.get("/", async (req, res) => {
-  //View the json from a web browser at root
-  const riverracelog = await crapi.getRiverRaceLog();
-
-  //get season ID
-  const uniqueSeasonIDs = [
-    ...new Set(riverracelog.items.map((rrl) => rrl.seasonId)),
-  ];
-  // console.log(uniqueSeasonIDs);
-  //sum up rankings
-  //get latest season ID if multiple
-  let latestSeasonID = Math.max(...uniqueSeasonIDs);
-
-  //get just the lastest season logs
-  const latestSeasons = riverracelog.items.filter(
-    (rrl) => rrl.seasonId === latestSeasonID
-  );
-
-  //find the standings for the latest season
-  const latestStandings = latestSeasons.map((ls) => ls.standings).flat();
-
-  //filter down to just my clan
-  const myClanStandings = latestStandings.filter(
-    (ls) => ls.clan.tag == `#${clanTag}`
-  );
-
-  //get all the partcipants in the logs for the season.
-  const myClanParticipants = myClanStandings
-    .map((mcs) => mcs.clan.participants)
-    .flat();
-
-  //group the tags together to organize players to make summing up scores easier
-  let uniquePlayerTags = [...new Set(myClanParticipants.map((mcp) => mcp.tag))];
-  const playerGrouping = uniquePlayerTags.map((playerTag) => {
-    const group = myClanParticipants.filter((mcp) => mcp.tag == playerTag);
-    return group;
-  });
-
-  //Sum up all scores and sort by highest score to lowest.
-  const playerTotal = playerGrouping
-    .map((pg) => {
-      let initialValue = 0;
-      const name = pg[0].name;
-      const total = pg.reduce((prev, curr) => {
-        return prev + curr.fame;
-      }, initialValue);
-      return { name, total };
-    })
-    .sort((a, b) => {
-      if (a.total > b.total) return -1;
-      else if (a.total < b.total) return 1;
-      else return 0;
-    });
-
-  const top6 = playerTotal.splice(0, 6);
-  res.json({ top6 });
-  // res.json({ playerTotal, playerGrouping, myClanParticipants });
-});
-
-app.listen(port, () => {
-  console.log(`example app listening on port ${port}`);
-});
