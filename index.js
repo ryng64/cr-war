@@ -40,11 +40,11 @@ client.on("messageCreate", async (message) => {
     // message.reply("River Race Season Score: Todo");
   } else if (message.content == "!misseddecks") {
     console.log("Missed Wars ran");
-    // const missed = await getMissedWar();
-    // const missedEmbeds = makeMissedEmbed(missed);
-    // channel.send({
-    //   embeds: [missedEmbeds.missedDeckEmbed, missedEmbeds.missedDaysEmbed],
-    // });
+    const missed = await getMissedWar();
+    const missedEmbeds = makeMissedEmbed(missed);
+    channel.send({
+      embeds: [missedEmbeds.missedDeckEmbed, missedEmbeds.missedDaysEmbed],
+    });
   }
   // MessageHandler(message);
 });
@@ -68,14 +68,36 @@ async function getMissedWar() {
     .then((data) => data)
     .catch((error) => error);
 
+  //get active members
+  const activeMembers = await fetch(
+    `https://api.clashroyale.com/v1/clans/%23${clanTag}`,
+    {
+      method: "GET",
+      headers: new Headers({
+        Authorization: `Bearer ${process.env.CRTOKEN}`,
+      }),
+    }
+  )
+    .then((response) => response.json())
+    .then((data) => data.memberList.map((member) => member.tag))
+    .catch((error) => error);
+
   // find all decks used
   const missedDecks = data.clan.participants.filter((participant) => {
-    if (participant.decksUsedToday < 4 && participant.decksUsedToday > 0)
+    if (
+      participant.decksUsedToday < 4 &&
+      participant.decksUsedToday > 0 &&
+      activeMembers.includes(participant.tag)
+    )
       return true;
   });
 
   const missedDays = data.clan.participants.filter((participant) => {
-    if (participant.decksUsedToday == 0) return true;
+    if (
+      participant.decksUsedToday == 0 &&
+      activeMembers.includes(participant.tag)
+    )
+      return true;
   });
 
   return { missedDecks, missedDays };
